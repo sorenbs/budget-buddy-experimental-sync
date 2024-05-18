@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["reactNative"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./app.db"
+}
+
+model Categories {
+  id           Int            @id @default(autoincrement())
+  name         String
+  type         String
+  transactions Transactions[]
+}
+
+model Transactions {
+  id          Int         @id @default(autoincrement())
+  category_id Int
+  amount      Float
+  date        Int
+  description String      @default("")
+  type        String
+  category    Categories? @relation(fields: [category_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model AddTransactionView {
+  isAddingTransaction Boolean @default(false)
+  amount              Float   @default(0)
+  description         String  @default("")
+  type                String  @unique @default("Expense")
+  categoryId          Int?
+}
