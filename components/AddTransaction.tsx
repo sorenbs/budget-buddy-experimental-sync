@@ -3,7 +3,8 @@ import { Button, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import Card from "./ui/Card";
 import SegmentedControl from "@react-native-segmented-control/segmented-control";
-import { prisma } from "../db"
+import { usePrismaContext } from "../ExperimentalPrismaProvider";
+import { Mutators } from "../server/mutators";
 
 export default function AddTransaction() {
 
@@ -15,19 +16,18 @@ export default function AddTransaction() {
     categoryId: null,
   }
 
+  const { prisma, mutators } = usePrismaContext<Mutators>();
   const viewData = prisma.addTransactionView.useFindFirst() || defaultViewData
   const expenseCategories = prisma.categories.useFindMany({ where: { type: "Expense" } })
   const incomeCategories = prisma.categories.useFindMany({ where: { type: "Income" } })
 
   async function handleSave() {
-    await prisma.transactions.create({
-      data: {
-        amount: viewData.amount,
-        description: viewData.description,
-        category_id: viewData.categoryId || 0,
-        date: new Date().getTime() / 1000,
-        type: viewData.type,
-      }
+    await mutators.createTransaction({
+      amount: viewData.amount,
+      description: viewData.description,
+      category_id: viewData.categoryId || 0,
+      date: new Date().getTime() / 1000,
+      type: viewData.type,
     })
     await prisma.addTransactionView.updateMany({ data: defaultViewData })
   }
@@ -99,6 +99,8 @@ function CategoryButton({
   title: string;
   isSelected: boolean;
 }) {
+  const { prisma } = usePrismaContext();
+
   return (
     <TouchableOpacity
       onPress={() => {
@@ -129,6 +131,8 @@ function CategoryButton({
 }
 
 function AddButton() {
+  const { prisma } = usePrismaContext();
+
   return (
     <TouchableOpacity
       onPress={() =>

@@ -1,0 +1,23 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsx ./index.ts",
+    "generate": "prisma generate --schema=../schema.prisma"
+  },
+  "author": "Søren Bramer Schmidt",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/ws": "^8.5.10",
+    "tsx": "^4.7.2"
+  },
+  "dependencies": {
+    "prisma": "^5.14.0",
+    "ws": "^8.16.0",
+    "zx": "^8.0.1"
+  }
+}

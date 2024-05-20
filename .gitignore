@@ -41,3 +41,5 @@ yarn-error.*
 # Use CNG to generate Android and iOS projects on demand
 android/
 ios/
+
+server/dbs/*

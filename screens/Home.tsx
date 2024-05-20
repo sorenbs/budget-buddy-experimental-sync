@@ -10,26 +10,44 @@ import { StatusBar } from "expo-status-bar";
 import TransactionList from "../components/TransactionsList";
 import Card from "../components/ui/Card";
 import AddTransaction from "../components/AddTransaction";
+import { createPrismaProvider, usePrismaContext } from "../ExperimentalPrismaProvider";
+import  { Mutators } from "../server/mutators";
 
-import { prisma } from "../db";
+export default function Home({route}: any) {
 
-export default function Home() {
+  const budgetName = route.params.name;
+
+  if(!budgetName) {
+    return (
+      <ScrollView contentContainerStyle={{ padding: 15, paddingVertical: 170 }}>
+        <Text>Please select a budget</Text>
+      </ScrollView>
+    )
+  }
+
+  // @ts-ignore
+  const PrismaProvider = createPrismaProvider(Mutators)
+
   return (
-    <ScrollView
-      contentContainerStyle={{
-        padding: 15,
-        paddingTop: Platform.select({ ios: 170, default: 15 }),
-      }}
-    >
-      <AddTransaction />
-      <TransactionSummary />
-      <TransactionList />
-      <StatusBar style="auto" />
-    </ScrollView>
+    <PrismaProvider databaseName={budgetName}>
+      <ScrollView
+        contentContainerStyle={{
+          padding: 15,
+          paddingTop: Platform.select({ ios: 170, default: 15 }),
+        }}
+      >
+        <AddTransaction />
+        <TransactionSummary />
+        <TransactionList />
+        <StatusBar style="auto" />
+      </ScrollView>
+    </PrismaProvider>
   );
 }
 
 function TransactionSummary() {
+  const { prisma } = usePrismaContext();
+
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);

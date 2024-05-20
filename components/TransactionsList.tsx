@@ -1,13 +1,15 @@
-import { Text, TouchableOpacity, View } from "react-native";
+import { TouchableOpacity, View } from "react-native";
 import TransactionListItem from "./TransactionListItem";
-import { prisma } from "../db"
+import { usePrismaContext } from "../ExperimentalPrismaProvider";
+import { Mutators } from "../server/mutators";
 
 export default function TransactionList() {
 
+  const { prisma, mutators } = usePrismaContext<Mutators>();
   const transactions = prisma.transactions.useFindMany({ orderBy: { date: "desc" }, include: {category: true} })
 
   async function deleteTransaction(id: number) {
-    await prisma.transactions.delete({ where: { id } });
+    await mutators.deleteTransaction(id)
   }
 
   return (
