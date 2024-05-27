@@ -12,7 +12,7 @@ This repository contains a version of the Budget Buddy app converted to use Pris
 
 ## Prisma for React Native
 
-Prisma is a widely used ORM for JS/TS backend applications. It is fast, easy to use and provides auto-completion plus complete type-safety of both queries and returned data. At Expos [App.js Conference](https://appjs.co/) we announced that Prisma now supports Expo and React Native. Follow the [getting-started instructions here](https://www.npmjs.com/package/@prisma/react-native) to set up Prisma in your own project.
+Prisma is a widely used ORM for JS/TS backend applications. It is fast, easy to use and provides auto-completion plus complete type-safety of both queries and returned data. At Expos [App.js Conference](https://appjs.co/) we announced that Prisma now supports Expo and React Native. Follow the [getting-started instructions here](https://github.com/prisma/react-native-prisma) to set up Prisma in your own project.
 
 ## Running the app
 
