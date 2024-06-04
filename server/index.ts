@@ -54,7 +54,7 @@ wss.on('connection', (ws: WebSocket) => {
 
                         // there's probably a race condition here. Need to refactor this call-back based way of accessing prisma-generated SQL.
                         if (client) {
-                            await prisma.$executeRawUnsafe(`INSERT INTO __prisma_mutations (query, params, client, sequenceNumber) VALUES ("${e.query}", "${e.params}", "${client.clientId}", ${client.latestSequenceNumber})`)
+                            await prisma.$executeRawUnsafe(`INSERT INTO __prisma_mutations (query, params, client, sequenceNumber) VALUES ("${e.query}", "${e.params.replaceAll(`"`, `'`)}", "${client.clientId}", ${client.latestSequenceNumber})`)
                         }
 
 

@@ -32,7 +32,7 @@ export default function App() {
 }
 
 function BudgetList({ navigation, route, options, back }: any) {
-  const budgets = ["Food", "Travel", "Family activities"]
+  const budgets = ["Food", "Travel", "Family"]
 
   const deleteBudget = (name: string) => {}
 
