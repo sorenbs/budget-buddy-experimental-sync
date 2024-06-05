@@ -3,7 +3,7 @@ import '@prisma/client/react-native';
 import { PrismaClient } from '@prisma/client/react-native';
 import { reactiveHooksExtension } from "@prisma/react-native";
 import { BaseMutators } from './server/BaseMutators';
-import { LogBox } from 'react-native';
+import { LogBox, Platform } from 'react-native';
 LogBox.ignoreLogs(["warn(prisma-client) This is the 10th instance of Prisma Client being started. Make sure this is intentional."])
 
 export interface PrismaProviderProps {
@@ -168,7 +168,7 @@ export function createPrismaProvider<T extends BaseMutators>(mutatorClass: (new 
 
 
                     // setup sync mechanism
-                    const ws = new WebSocket('ws://localhost:8080');
+                    const ws = new WebSocket(`ws://${Platform.OS === 'android' ? '10.0.2.2' : 'localhost'}:8080`);
                     ws.onopen = () => {
                         console.log('Connected to server');
 
@@ -186,6 +186,10 @@ export function createPrismaProvider<T extends BaseMutators>(mutatorClass: (new 
 
                     ws.onclose = () => {
                         console.log('Disconnected from server');
+                    }
+
+                    ws.onerror = (e) => {
+                        console.log(e);
                     }
 
 
