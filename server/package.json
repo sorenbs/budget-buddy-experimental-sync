@@ -13,11 +13,11 @@
   "license": "ISC",
   "devDependencies": {
     "@types/ws": "^8.5.10",
-    "tsx": "^4.7.2"
+    "tsx": "^4.15.6"
   },
   "dependencies": {
-    "prisma": "^5.14.0",
-    "ws": "^8.16.0",
-    "zx": "^8.0.1"
+    "prisma": "^5.15.0",
+    "ws": "^8.17.1",
+    "zx": "^8.1.2"
   }
 }
