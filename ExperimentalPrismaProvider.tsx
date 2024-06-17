@@ -117,7 +117,7 @@ const applyRemoteSQL = async (remotePrisma: PrismaClient, pendingSqlStatements: 
 
 const applyMigrations = async (name: string) => {
     const prismaForMigrating = new PrismaClient({ datasourceUrl: `file:./${name}.db` })
-    prismaForMigrating.$applyPendingMigrations()
+    await prismaForMigrating.$applyPendingMigrations()
     await prismaForMigrating.$queryRawUnsafe(`CREATE TABLE IF NOT EXISTS prisma_pending_mutations ("id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, client TEXT, name TEXT, args TEXT)`)
     await prismaForMigrating.$disconnect()
 }
