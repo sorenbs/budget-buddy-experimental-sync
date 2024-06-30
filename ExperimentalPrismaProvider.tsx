@@ -30,8 +30,9 @@ type PrismaAndMutators<MutatorType extends BaseMutators> = { prisma: PrismaClien
 const PrismaContext = createContext<PrismaAndMutators<BaseMutators> | null>(null);
 
 const getDeviceId = async () => {
-    const prisma = new PrismaClient({ datasourceUrl: `file:./deviceId.db` })
+    const prisma = new PrismaClient({ datasourceUrl: `file:./prismaSyncIndex.db` })
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS deviceId ("deviceId" TEXT)`)
+    await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS databases ("id" TEXT PRIMARY KEY, lastSeenServerSequence)`)
     let deviceId = (await prisma.$queryRaw<Array<{ deviceId: string }>>`SELECT deviceId FROM deviceId`)[0]?.deviceId
 
     if (!deviceId) {
@@ -39,7 +40,7 @@ const getDeviceId = async () => {
         await prisma.$executeRawUnsafe(`INSERT INTO deviceId VALUES ("${deviceId}")`)
     }
 
-    return deviceId
+    return {deviceId, syncIndexPrisma: prisma}
 }
 
 const getLocalDb = async (name: string) => {
@@ -54,7 +55,7 @@ const getRemoteDb = async (name: string) => {
     return prisma
 }
 
-const refreshLocalDb = async (prismaInstance: PrismaClientExtended, remotePrisma: PrismaClient, mutators: BaseMutators, name: string, latestSequenceNumber: number) => {
+const refreshLocalDb = async (prismaInstance: PrismaClientExtended, remotePrisma: PrismaClient, mutators: BaseMutators, name: string) => {
     await prismaInstance.$queryRawUnsafe<string>(`ATTACH 'file:./${name}.db' as remoteDb;`)
     const tables = await prismaInstance.$queryRaw<Array<{ name: string, sql: string }>>`SELECT name, sql FROM remoteDb.sqlite_master WHERE type='table' AND name != "sqlite_sequence" AND name != "prisma_pending_mutations";`
 
@@ -69,7 +70,7 @@ const refreshLocalDb = async (prismaInstance: PrismaClientExtended, remotePrisma
     await prismaInstance.$executeRawUnsafe(`PRAGMA foreign_keys = 1;`)
     await prismaInstance.$executeRawUnsafe(`DETACH DATABASE 'remoteDb';`)
 
-    const pendingMutations = await remotePrisma.$queryRawUnsafe(`SELECT * FROM prisma_pending_mutations WHERE id > ${latestSequenceNumber}`) as Array<any>
+    const pendingMutations = await remotePrisma.$queryRawUnsafe(`SELECT * FROM prisma_pending_mutations`) as Array<any>
     for (const mutation of pendingMutations) {
         const args = JSON.parse(mutation.args.replaceAll(`'''`, `"`))
         const name = mutation.name
@@ -158,13 +159,13 @@ export function createPrismaProvider<T extends BaseMutators>(mutatorClass: (new 
         useEffect(() => {
             async function setup() {
                 try {
-                    const deviceId = await await getDeviceId()
+                    const {deviceId, syncIndexPrisma} = await getDeviceId()
                     // set up databases
                     await applyMigrations(databaseName);
                     const prisma = await getLocalDb(databaseName)
                     const remotePrisma = await getRemoteDb(databaseName)
                     const mutators = new mutatorClass(prisma)
-                    await refreshLocalDb(prisma, remotePrisma, mutators, databaseName, 0) // TODO: this last argument should not be 0. It should be stored from the last data sync from the server.
+                    await refreshLocalDb(prisma, remotePrisma, mutators, databaseName) // TODO: this last argument should not be 0. It should be stored from the last data sync from the server.
 
 
                     // setup sync mechanism
@@ -180,7 +181,8 @@ export function createPrismaProvider<T extends BaseMutators>(mutatorClass: (new 
 
                         if (data.pendingSqlStatements && data.pendingSqlStatements.length > 0) {
                             await applyRemoteSQL(remotePrisma, data.pendingSqlStatements, data.clientId, data.latestSequenceNumber)
-                            await refreshLocalDb(prisma, remotePrisma, mutators, databaseName, data.latestSequenceNumber)
+                            await syncIndexPrisma.$executeRawUnsafe(`INSERT INTO databases (id, lastSeenServerSequence) VALUES ("${databaseName}", ${data.latestSequenceNumber}) ON CONFLICT(id) DO UPDATE SET lastSeenServerSequence=excluded.lastSeenServerSequence`)
+                            await refreshLocalDb(prisma, remotePrisma, mutators, databaseName)
                         }
                     }
 

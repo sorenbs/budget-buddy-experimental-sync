@@ -5,6 +5,47 @@ import { PrismaClient } from '../node_modules/.prisma/client'
 import { $ } from 'zx'
 import { Mutators } from './mutators';
 
+/*
+
+SERVER
+receives
+- named mutations with (clientId,clientSequence) pair
+stores
+- __prisma_mutations: named mutations with (clientId,clientSequence) pair and serverSequence
+- __prisma_clients: last seen serverSequence for the client
+
+CLIENT
+receives
+- SQL with (clientId,clientSequence) pair and serverSequence
+stores
+- pending named mutations with (clientId,clientSequence) pair
+
+INTERACTIONS
+client is online, generates a mutation
+- Add to pendingMutations with clientSequence
+- Send to server along with last seen serverSequence, which stores in mutations with (clientId,clientSequence) pair and serverSequence
+- Receive SQL more recent than last seeen serverSequence
+- Apply SQL more recent than last seeen serverSequence in remoteDB, and delete associated pendingMutations.
+- override localDB with content of remoteDB
+
+client is offline, generate a mutation
+- Add to pendingMutations with clientSequence
+
+client comes online with pendingMutations
+- Send to server along with last seen serverSequence, which stores in mutations with (clientId,clientSequence) pair and serverSequence
+- Receive SQL more recent than last seeen serverSequence
+- Apply SQL more recent than last seeen serverSequence in remoteDB, and delete associated pendingMutations.
+- override localDB with content of remoteDB
+
+client comes online without pendingMutations
+- Send last seen serverSequence
+- Receive SQL more recent than last seeen serverSequence
+- Apply SQL more recent than last seeen serverSequence in remoteDB, and delete associated pendingMutations.
+- override localDB with content of remoteDB
+
+
+*/
+
 const configuredPrisma = () => new PrismaClient({ log: [{ emit: "event", level: "query" }] })
 type ConfiguredPrismaType = ReturnType<typeof configuredPrisma>
 type ClientType = { clientId: string, latestSequenceNumber: number, ws: WebSocket }
@@ -36,7 +77,8 @@ wss.on('connection', (ws: WebSocket) => {
                 } else {
                     const prisma = new PrismaClient({ datasourceUrl: `file:./server/dbs/${name}.db`, log: [{ emit: "event", level: "query" }] })
                     await applyPendingMigrations(name)
-                    await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS __prisma_mutations ("id" INTEGER PRIMARY KEY, "query" TEXT, "params" TEXT, "client" TEXT, "sequenceNumber" INTEGER)`)
+                    await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS __prisma_mutations ("serverSequence" INTEGER PRIMARY KEY, "mutationName" TEXT, "mutationParams" TEXT, "clientId" TEXT, "clientSequence" INTEGER)`)
+                    await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS __prisma_clients ("clientId" TEXT PRIMARY KEY, "lastSeenServerSequence" INTEGER)`)
 
                     activeDb = {
                         dbName: name,
@@ -54,7 +96,7 @@ wss.on('connection', (ws: WebSocket) => {
 
                         // there's probably a race condition here. Need to refactor this call-back based way of accessing prisma-generated SQL.
                         if (client) {
-                            await prisma.$executeRawUnsafe(`INSERT INTO __prisma_mutations (query, params, client, sequenceNumber) VALUES ("${e.query}", "${e.params.replaceAll(`"`, `'`)}", "${client.clientId}", ${client.latestSequenceNumber})`)
+                            await prisma.$executeRawUnsafe(`INSERT INTO __prisma_mutations (mutationName, mutationParams, clientId, clientSequence) VALUES ("${e.query}", "${e.params.replaceAll(`"`, `'`)}", "${client.clientId}", ${client.latestSequenceNumber})`)
                         }
 
 
